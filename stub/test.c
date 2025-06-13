@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "sai.h"
 
 const char* test_profile_get_value(
@@ -69,8 +70,9 @@ int main()
       printf("Failed to query LAG API, status=%d\n", status);
       return 1;
     }
+    printf("\n");
 
-    // create first LAG and its members
+    printf("===== Create first LAG and its members\n");
     sai_object_id_t first_lag_id = 0;
     status = lag_api->create_lag(&first_lag_id, 0, NULL);
     if (status != SAI_STATUS_SUCCESS) {
@@ -78,17 +80,32 @@ int main()
       return 1;
     }
 
-    sai_object_id_t first_lag_members[2] = {0};
-    for (uint32_t i = 0; i < 2; ++i) {
-      sai_attribute_t lag_member_attr = {0};
-      status = lag_api->create_lag_member(&first_lag_members[i], 1, &lag_member_attr);
-      if (status != SAI_STATUS_SUCCESS) {
-        printf("Failed to create a LAG MEMBER, status=%d\n", status);
-        return 1;
-      }
+    sai_object_id_t first_lag_first_member = 0;
+    sai_attribute_t lag_member_attrs[2] = {0};
+    lag_member_attrs[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    lag_member_attrs[0].value.oid = first_lag_id;
+    lag_member_attrs[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    lag_member_attrs[1].value.oid = 0x1;
+    status = lag_api->create_lag_member(&first_lag_first_member, 2, lag_member_attrs);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to create a LAG MEMBER, status=%d\n", status);
+      return 1;
     }
 
-    // create second LAG and its members
+    sai_object_id_t first_lag_second_member = 0;
+    lag_member_attrs[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    lag_member_attrs[0].value.oid = first_lag_id;
+    lag_member_attrs[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    lag_member_attrs[1].value.oid = 0x100000001;
+    status = lag_api->create_lag_member(&first_lag_second_member, 2, lag_member_attrs);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to create a LAG MEMBER, status=%d\n", status);
+      return 1;
+    }
+    printf("\n");
+
+
+    printf("===== Create second LAG and its members\n");
     sai_object_id_t second_lag_id = 0;
     status = lag_api->create_lag(&second_lag_id, 0, NULL);
     if (status != SAI_STATUS_SUCCESS) {
@@ -96,62 +113,159 @@ int main()
       return 1;
     }
 
-    sai_object_id_t second_lag_members[2] = {0};
-    for (uint32_t i = 0; i < 2; ++i) {
-      status = lag_api->create_lag_member(&second_lag_members[i], 1, NULL);
-      if (status != SAI_STATUS_SUCCESS) {
-        printf("Failed to create a LAG MEMBER, status=%d\n", status);
-        return 1;
-      }
-    }
-
-    // get LAG parameters
-    status = lag_api->get_lag_attribute(first_lag_id, 1, NULL); // NOT IMPLEMENTED YET
-    status = lag_api->get_lag_attribute(second_lag_id, 1, NULL); // NOT IMPLEMENTED YET
-
-    // get LAG member parameters
-    status = lag_api->get_lag_member_attribute(first_lag_members[0], 1, NULL); // NOT IMPLEMENTED YET
-    status = lag_api->get_lag_member_attribute(second_lag_members[0], 1, NULL); // NOT IMPLEMENTED YET
-
-    // remove members and check LAG parameters
-    status = lag_api->remove_lag_member(first_lag_members[1]);
+    sai_object_id_t second_lag_first_member = 0;
+    lag_member_attrs[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    lag_member_attrs[0].value.oid = second_lag_id;
+    lag_member_attrs[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    lag_member_attrs[1].value.oid = 0x200000001;
+    status = lag_api->create_lag_member(&second_lag_first_member, 2, lag_member_attrs);
     if (status != SAI_STATUS_SUCCESS) {
-      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", first_lag_members[1], status);
-      return 1;
-    }
-    status = lag_api->get_lag_attribute(first_lag_id, 1, NULL); // NOT IMPLEMENTED YET
-
-    status = lag_api->remove_lag_member(second_lag_members[0]);
-    if (status != SAI_STATUS_SUCCESS) {
-      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", second_lag_members[0], status);
-      return 1;
-    }
-    status = lag_api->get_lag_attribute(second_lag_id, 1, NULL); // NOT IMPLEMENTED YET
-
-    // remove remaining LAG members and LAGs
-    status = lag_api->remove_lag_member(first_lag_members[0]);
-    if (status != SAI_STATUS_SUCCESS) {
-      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", first_lag_members[1], status);
+      printf("Failed to create a LAG MEMBER, status=%d\n", status);
       return 1;
     }
 
-    status = lag_api->remove_lag_member(second_lag_members[1]);
+    sai_object_id_t second_lag_second_member = 0;
+    lag_member_attrs[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    lag_member_attrs[0].value.oid = second_lag_id;
+    lag_member_attrs[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    lag_member_attrs[1].value.oid = 0x300000001;
+    status = lag_api->create_lag_member(&second_lag_second_member, 2, lag_member_attrs);
     if (status != SAI_STATUS_SUCCESS) {
-      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", second_lag_members[1], status);
+      printf("Failed to create a LAG MEMBER, status=%d\n", status);
+      return 1;
+    }
+    printf("\n");
+
+
+    printf("===== Get LAG parameters\n");
+    sai_attribute_t lag_attr = {0};
+    lag_attr.id = SAI_LAG_ATTR_PORT_LIST;
+    lag_attr.value.objlist.count = 32;
+    lag_attr.value.objlist.list = calloc(32, sizeof(sai_object_id_t));
+    status = lag_api->get_lag_attribute(first_lag_id, 1, &lag_attr);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to get a LAG parameter, status=%d\n", status);
+      return 1;
+    }
+    printf("First LAGs port list:\n");
+    for (uint32_t i = 0; i < lag_attr.value.objlist.count; ++i) {
+      printf("0x%lX, ", lag_attr.value.objlist.list[i]);
+    }
+    printf("\n");
+
+    lag_attr.value.objlist.count = 32;
+    status = lag_api->get_lag_attribute(second_lag_id, 1, &lag_attr);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to get a LAG parameter, status=%d\n", status);
+      return 1;
+    }
+    printf("Second LAGs port list:\n");
+    for (uint32_t i = 0; i < lag_attr.value.objlist.count; ++i) {
+      printf("0x%lX, ", lag_attr.value.objlist.list[i]);
+    }
+    printf("\n\n");
+    free(lag_attr.value.objlist.list);
+
+
+    printf("===== Get LAG member parameters\n");
+    lag_member_attrs[0].id = SAI_LAG_MEMBER_ATTR_LAG_ID;
+    lag_member_attrs[1].id = SAI_LAG_MEMBER_ATTR_PORT_ID;
+    status = lag_api->get_lag_member_attribute(first_lag_first_member, 2, lag_member_attrs);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to get LAG member parameters, status=%d\n", status);
+      return 1;
+    }
+    printf("LAG Member 0x%lX LAG ID: 0x%lX, PORT ID: 0x%lX\n", first_lag_first_member, lag_member_attrs[0].value.oid, lag_member_attrs[1].value.oid);
+
+    status = lag_api->get_lag_member_attribute(second_lag_second_member, 2, lag_member_attrs);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to get LAG member parameters, status=%d\n", status);
+      return 1;
+    }
+    printf("LAG Member 0x%lX LAG ID: 0x%lX, PORT ID: 0x%lX\n", first_lag_first_member, lag_member_attrs[0].value.oid, lag_member_attrs[1].value.oid);
+    printf("\n");
+
+
+    printf("===== Remove members and check LAG parameters\n");
+    status = lag_api->remove_lag_member(first_lag_second_member);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", first_lag_second_member, status);
       return 1;
     }
 
+    lag_attr.id = SAI_LAG_ATTR_PORT_LIST;
+    lag_attr.value.objlist.count = 32;
+    lag_attr.value.objlist.list = calloc(32, sizeof(sai_object_id_t));
+    status = lag_api->get_lag_attribute(first_lag_id, 1, &lag_attr);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to get a LAG parameter, status=%d\n", status);
+      free(lag_attr.value.objlist.list);
+      return 1;
+    }
+    printf("First LAGs port list:\n");
+    for (uint32_t i = 0; i < lag_attr.value.objlist.count; ++i) {
+      printf("0x%lX, ", lag_attr.value.objlist.list[i]);
+    }
+    printf("\n");
+
+    status = lag_api->remove_lag_member(second_lag_first_member);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", second_lag_first_member, status);
+      free(lag_attr.value.objlist.list);
+      return 1;
+    }
+    status = lag_api->get_lag_attribute(second_lag_id, 1, &lag_attr);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to get a LAG parameter, status=%d\n", status);
+      free(lag_attr.value.objlist.list);
+      return 1;
+    }
+    printf("First LAGs port list:\n");
+    for (uint32_t i = 0; i < lag_attr.value.objlist.count; ++i) {
+      printf("0x%lX, ", lag_attr.value.objlist.list[i]);
+    }
+    printf("\n\n");
+    free(lag_attr.value.objlist.list);
+
+
+    printf("===== Verify that status SAI_STATUS_OBJECT_IN_USE is returned when trying to remove a non-empty LAG\n");
     status = lag_api->remove_lag(second_lag_id);
-    if (status != SAI_STATUS_SUCCESS) {
-      printf("Failed to remove the LAG  0x%lX, status=%d\n", second_lag_id, status);
+    if (status != SAI_STATUS_OBJECT_IN_USE) {
+      printf("Expected status %lX when removing the LAG  0x%lX, status=%d\n", SAI_STATUS_OBJECT_IN_USE, second_lag_id, status);
       return 1;
     }
 
     status = lag_api->remove_lag(first_lag_id);
-    if (status != SAI_STATUS_SUCCESS) {
-      printf("Failed to remove the LAG  0x%lX, status=%d\n", first_lag_id, status);
+    if (status != SAI_STATUS_OBJECT_IN_USE) {
+      printf("Expected status %lX when removing the LAG  0x%lX, status=%d\n", SAI_STATUS_OBJECT_IN_USE, first_lag_id, status);
       return 1;
     }
+    printf("\n");
+
+
+    printf("===== Remove remaining LAG members and LAGs\n");
+    status = lag_api->remove_lag_member(first_lag_first_member);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", first_lag_first_member, status);
+      return 1;
+    }
+    status = lag_api->remove_lag(first_lag_id);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Expected status %lX when removing the LAG  0x%lX, status=%d\n", SAI_STATUS_OBJECT_IN_USE, first_lag_id, status);
+      return 1;
+    }
+
+    status = lag_api->remove_lag_member(second_lag_second_member);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Failed to remove the LAG MEMBER 0x%lX, status=%d\n", second_lag_second_member, status);
+      return 1;
+    }
+    status = lag_api->remove_lag(second_lag_id);
+    if (status != SAI_STATUS_SUCCESS) {
+      printf("Expected status %lX when removing the LAG  0x%lX, status=%d\n", SAI_STATUS_OBJECT_IN_USE, second_lag_id, status);
+      return 1;
+    }
+
 
     switch_api->shutdown_switch(0);
     status = sai_api_uninitialize();
